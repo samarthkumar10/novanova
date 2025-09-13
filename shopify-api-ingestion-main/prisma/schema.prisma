@@ -1,0 +1,304 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- PRODUCT MODELS ---
+
+model Product {
+  id          BigInt   @id
+  title       String
+  handle      String   @unique
+  bodyHtml    String?
+  vendor      String
+  productType String
+  createdAt   DateTime
+  updatedAt   DateTime
+  publishedAt DateTime?
+  status      ProductStatus
+  
+  variants    ProductVariant[]
+  images      ProductImage[]
+  options     ProductOption[]
+  tags        ProductTag[]
+  lineItems   LineItem[] // Relation to line items
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id                BigInt          @id
+  title             String
+  price             Decimal
+  compareAtPrice    Decimal?
+  sku               String          @unique
+  position          Int
+  inventoryPolicy   InventoryPolicy
+  inventoryQuantity Int
+  requiresShipping  Boolean
+  taxable           Boolean
+  barcode           String?
+  weight            Float?
+  weightUnit        String?
+
+  productId         BigInt
+  product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  imageId           BigInt?
+  image             ProductImage?   @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  lineItems         LineItem[]      // A variant can be in many line items
+
+  @@map("product_variants")
+}
+
+model ProductImage {
+  id        BigInt   @id
+  altText   String?
+  width     Int
+  height    Int
+  src       String
+  productId BigInt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variants  ProductVariant[]
+
+  @@map("product_images")
+}
+
+model ProductOption {
+  id        BigInt   @id
+  name      String
+  position  Int
+  values    String[]
+  productId BigInt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_options")
+}
+
+// --- CUSTOMER MODELS ---
+
+model Customer {
+  id                             BigInt    @id
+  email                          String?   @unique
+  firstName                      String?
+  lastName                       String?
+  phone                          String?
+  ordersCount                    Int
+  state                          CustomerState
+  totalSpent                     Decimal
+  note                           String?
+  verifiedEmail                  Boolean
+  taxExempt                      Boolean
+  currency                       String
+  createdAt                      DateTime
+  updatedAt                      DateTime
+  emailMarketingState            MarketingConsentState
+  emailMarketingOptInLevel       MarketingOptInLevel?
+  emailMarketingConsentUpdatedAt DateTime?
+  smsMarketingState              MarketingConsentState
+  smsMarketingConsentUpdatedAt   DateTime?
+
+  addresses                      Address[]
+  tags                           CustomerTag[]
+  orders                         Order[]
+
+  @@map("customers")
+}
+
+model Address {
+  id          BigInt   @id
+  address1    String?
+  address2    String?
+  city        String?
+  province    String?
+  country     String?
+  zip         String?
+  phone       String?
+  company     String?
+  countryCode String?
+  isDefault   Boolean
+
+  customerId  BigInt
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_addresses")
+}
+
+// --- ORDER MODELS ---
+
+model Order {
+  id                  BigInt            @id
+  name                String?
+  orderNumber         Int?           @unique
+  email               String?
+  phone               String?
+  financialStatus     FinancialStatus?
+  fulfillmentStatus   FulfillmentStatus?
+  currency            String?
+  totalPrice          Decimal?
+  subtotalPrice       Decimal?
+  totalTax            Decimal?
+  totalDiscounts      Decimal?
+  totalLineItemsPrice Decimal?
+  totalShippingPrice  Decimal?
+  createdAt           DateTime?
+  updatedAt           DateTime?
+  processedAt         DateTime?
+  cancelledAt         DateTime?
+  cancelReason        String?
+  note                String?
+  token               String?         @unique
+  orderStatusUrl      String?
+  
+  customer            Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerId          BigInt?
+
+  shippingAddress     OrderAddress?     @relation("OrderShippingAddress", fields: [shippingAddressId], references: [id], onDelete: SetNull)
+  shippingAddressId   Int?              @unique
+  billingAddress      OrderAddress?     @relation("OrderBillingAddress", fields: [billingAddressId], references: [id], onDelete: SetNull)
+  billingAddressId    Int?              @unique
+
+  lineItems           LineItem[]
+  tags                OrderTag[]
+
+  @@map("orders")
+}
+
+model LineItem {
+  id              BigInt    @id
+  title           String
+  variantTitle    String?
+  sku             String?
+  vendor          String?
+  quantity        Int
+  price           Decimal
+  totalDiscount   Decimal
+  taxable         Boolean
+
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId         BigInt
+
+  product         Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productId       BigInt?
+  variant         ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  variantId       BigInt?
+
+  @@map("line_items")
+}
+
+model OrderAddress {
+  id            Int      @id @default(autoincrement())
+  firstName     String?
+  lastName      String?
+  address1      String?
+  address2      String?
+  city          String?
+  province      String?
+  country       String?
+  zip           String?
+  phone         String?
+  company       String?
+  countryCode   String?
+  
+  orderShipping Order? @relation("OrderShippingAddress")
+  orderBilling  Order? @relation("OrderBillingAddress")
+
+  @@map("order_addresses")
+}
+
+// --- TAGS (CENTRALIZED MODEL) ---
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  
+  products  ProductTag[]
+  customers CustomerTag[]
+  orders    OrderTag[]
+  
+  @@map("tags")
+}
+
+model ProductTag {
+  productId BigInt
+  tagId     Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productId, tagId])
+  @@map("product_tags")
+}
+
+model CustomerTag {
+  customerId BigInt
+  tagId      Int
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, tagId])
+  @@map("customer_tags")
+}
+
+model OrderTag {
+  orderId BigInt
+  tagId   Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  tag     Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([orderId, tagId])
+  @@map("order_tags")
+}
+
+// --- ENUMS ---
+
+enum ProductStatus {
+  ACTIVE
+  DRAFT
+  ARCHIVED
+}
+
+enum InventoryPolicy {
+  DENY
+  CONTINUE
+}
+
+enum CustomerState {
+  ENABLED
+  DISABLED
+  DECLINED
+  INVITED
+}
+
+enum MarketingConsentState {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  NOT_SUBSCRIBED
+  PENDING
+}
+
+enum MarketingOptInLevel {
+  SINGLE_OPT_IN
+  CONFIRMED_OPT_IN // <-- Completed and corrected this value
+  UNKNOWN
+}
+
+enum FinancialStatus {
+  PENDING
+  AUTHORIZED
+  PARTIALLY_PAID
+  PAID
+  PARTIALLY_REFUNDED
+  REFUNDED
+  VOIDED
+}
+
+enum FulfillmentStatus {
+  FULFILLED
+  UNFULFILLED
+  PARTIALLY_FULFILLED
+  SCHEDULED
+  ON_HOLD
+}
