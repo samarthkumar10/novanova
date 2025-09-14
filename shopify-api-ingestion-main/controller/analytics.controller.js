@@ -52,12 +52,17 @@ class AnalyticsController {
       const tenantId = req.tenant.id;
       const { startDate, endDate } = req.query;
 
-      let whereClause = { tenantId };
+      let whereClause = { 
+        tenantId,
+        createdAt: { not: null }, // Ensure createdAt is not null
+        totalPrice: { not: null } // Ensure totalPrice is not null
+      };
       
       if (startDate && endDate) {
         whereClause.createdAt = {
           gte: new Date(startDate),
-          lte: new Date(endDate)
+          lte: new Date(endDate),
+          not: null
         };
       }
 
@@ -71,6 +76,7 @@ class AnalyticsController {
 
       // Group by day
       const ordersByDay = orders.reduce((acc, order) => {
+        if (!order.createdAt) return acc; // Skip if date is null
         const date = order.createdAt.toISOString().split('T')[0];
         if (!acc[date]) {
           acc[date] = { count: 0, revenue: 0 };
@@ -159,7 +165,7 @@ class AnalyticsController {
       });
 
       // Group revenue by day/week/month based on period
-      const groupedRevenue = this.groupRevenueByPeriod(revenueData, period);
+      const groupedRevenue = AnalyticsController.groupRevenueByPeriod(revenueData, period);
 
       res.json({ 
         revenueAnalytics: groupedRevenue,
@@ -177,6 +183,11 @@ class AnalyticsController {
     const grouped = {};
     
     data.forEach(order => {
+      // Skip if essential data is missing
+      if (!order.createdAt || order.totalPrice === null) {
+        return;
+      }
+
       let key;
       const date = new Date(order.createdAt);
       
