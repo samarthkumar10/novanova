@@ -64,7 +64,7 @@ const Dashboard = () => {
         'x-tenant-id': user?.tenantId || 'default'
       };
       
-      const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+      const API_BASE = 'http://localhost:3000';
       
       // Call your actual data ingestion endpoints
       await Promise.all([
@@ -99,62 +99,29 @@ const Dashboard = () => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
+      const API_BASE = 'http://localhost:3000';
 
-      // Simulate API calls (replace with actual endpoints)
-      const [overview, ordersByDate, topCustomers, revenueAnalytics, productPerformance] = await Promise.all([
-        // Mock API responses - replace with real endpoints
-        new Promise(resolve => setTimeout(() => resolve({
-          overview: {
-            totalCustomers: 1245,
-            totalOrders: 3421,
-            totalProducts: 156,
-            totalRevenue: 89750.50
-          }
-        }), 500)),
-        new Promise(resolve => setTimeout(() => resolve({
-          ordersByDay: {
-            '2025-09-10': { count: 12, revenue: 1250 },
-            '2025-09-11': { count: 18, revenue: 1890 },
-            '2025-09-12': { count: 15, revenue: 1650 },
-            '2025-09-13': { count: 22, revenue: 2200 },
-            '2025-09-14': { count: 28, revenue: 3150 }
-          }
-        }), 500)),
-        new Promise(resolve => setTimeout(() => resolve({
-          topCustomers: [
-            { id: 1, firstName: 'John', lastName: 'Doe', email: 'john@example.com', totalSpent: 2450.00, ordersCount: 12 },
-            { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane@example.com', totalSpent: 1890.50, ordersCount: 8 },
-            { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike@example.com', totalSpent: 1650.75, ordersCount: 6 },
-            { id: 4, firstName: 'Sarah', lastName: 'Wilson', email: 'sarah@example.com', totalSpent: 1420.25, ordersCount: 9 },
-            { id: 5, firstName: 'David', lastName: 'Brown', email: 'david@example.com', totalSpent: 1280.00, ordersCount: 5 }
-          ]
-        }), 500)),
-        new Promise(resolve => setTimeout(() => resolve({
-          revenueAnalytics: {
-            '2025-09-10': { revenue: 1250, orders: 12 },
-            '2025-09-11': { revenue: 1890, orders: 18 },
-            '2025-09-12': { revenue: 1650, orders: 15 },
-            '2025-09-13': { revenue: 2200, orders: 22 },
-            '2025-09-14': { revenue: 3150, orders: 28 }
-          }
-        }), 500)),
-        new Promise(resolve => setTimeout(() => resolve({
-          productPerformance: [
-            { id: 1, title: 'Premium Headphones', vendor: 'AudioTech', totalQuantitySold: 125, totalRevenue: 12500 },
-            { id: 2, title: 'Wireless Mouse', vendor: 'TechGear', totalQuantitySold: 89, totalRevenue: 4450 },
-            { id: 3, title: 'Laptop Stand', vendor: 'OfficeMax', totalQuantitySold: 156, totalRevenue: 7800 },
-            { id: 4, title: 'USB-C Hub', vendor: 'TechGear', totalQuantitySold: 67, totalRevenue: 3350 },
-            { id: 5, title: 'Monitor Stand', vendor: 'OfficeMax', totalQuantitySold: 45, totalRevenue: 2250 }
-          ]
-        }), 500))
+      // Fetch analytics data from correct endpoints
+      const [overviewRes, ordersByDateRes, topCustomersRes, revenueRes, productPerformanceRes] = await Promise.all([
+        fetch(`${API_BASE}/api/analytics/overview`, { headers, credentials: 'include' }),
+        fetch(`${API_BASE}/api/analytics/orders-by-date`, { headers, credentials: 'include' }),
+        fetch(`${API_BASE}/api/analytics/top-customers`, { headers, credentials: 'include' }),
+        fetch(`${API_BASE}/api/analytics/revenue`, { headers, credentials: 'include' }),
+        fetch(`${API_BASE}/api/analytics/product-performance`, { headers, credentials: 'include' })
       ]);
 
+      const overviewData = await overviewRes.json();
+      const ordersByDateData = await ordersByDateRes.json();
+      const topCustomersData = await topCustomersRes.json();
+      const revenueData = await revenueRes.json();
+      const productPerformanceData = await productPerformanceRes.json();
+
       setDashboardData({
-        overview: overview.overview || {},
-        ordersByDay: ordersByDate.ordersByDay || {},
-        topCustomers: topCustomers.topCustomers || [],
-        revenueAnalytics: revenueAnalytics.revenueAnalytics || {},
-        productPerformance: productPerformance.productPerformance || []
+        overview: overviewData.overview || {},
+        ordersByDay: ordersByDateData.ordersByDay || {},
+        topCustomers: topCustomersData.topCustomers || [],
+        revenueAnalytics: revenueData.revenueAnalytics || {},
+        productPerformance: productPerformanceData.productPerformance || []
       });
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);

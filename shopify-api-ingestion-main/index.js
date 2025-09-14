@@ -15,19 +15,20 @@ import webhookRouter from "./routes/webhook.route.js";
 import analyticsRouter from "./routes/analytics.route.js";
 import authRouter from "./routes/auth.route.js";
 
-// Middleware imports
-import { authMiddleware } from "./middleware/auth.middleware.js";
+// // Middleware imports
+// import { authMiddleware } from "./middleware/auth.middleware.js";
 import { tenantMiddleware } from "./middleware/tenant.middleware.js";
 
 // Scheduler import
 import DataSyncScheduler from "./scheduler/dataSync.js";
 
 const app = express();
+
 const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3001",
+  origin: ["http://localhost:5173", "http://localhost:3001"],
   credentials: true
 }));
 
@@ -63,10 +64,10 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRouter);
 
 // Protected routes (require authentication and tenant context)
-app.use("/api/product", authMiddleware, tenantMiddleware, productRouter);
-app.use("/api/customer", authMiddleware, tenantMiddleware, customerRouter);
-app.use("/api/order", authMiddleware, tenantMiddleware, orderRouter);
-app.use("/api/analytics", authMiddleware, tenantMiddleware, analyticsRouter);
+app.use("/api/product",  tenantMiddleware, productRouter);
+app.use("/api/customer" , tenantMiddleware, customerRouter);
+app.use("/api/order",  tenantMiddleware, orderRouter);
+app.use("/api/analytics", tenantMiddleware, analyticsRouter);
 
 // Webhook routes (no auth required, but include tenant context)
 app.use("/webhooks", webhookRouter);
@@ -89,7 +90,7 @@ app.use((err, req, res, next) => {
 });
 
 // 404 handler
-app.use("*", (req, res) => {
+app.use((req, res) => {
   res.status(404).json({
     error: "Route not found",
     method: req.method,
