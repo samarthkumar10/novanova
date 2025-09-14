@@ -302,3 +302,49 @@ enum FulfillmentStatus {
   SCHEDULED
   ON_HOLD
 }
+
+// Add this new model to your schema.prisma
+model Tenant {
+  id                  String   @id @default(uuid())
+  name               String
+  shopifyStore       String
+  accessToken        String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  // Relations
+  products           Product[]
+  customers          Customer[]
+  orders             Order[]
+  users              User[]
+  
+  @@map("tenants")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@map("users")
+}
+
+// Update your existing models by adding these fields:
+// Add to Product model:
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+// Add to Customer model:
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+// Add to Order model:
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  
